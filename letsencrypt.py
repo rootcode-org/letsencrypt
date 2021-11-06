@@ -6,7 +6,6 @@ import json
 import time
 import base64
 import math
-import certifi
 from hashlib import sha256
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
@@ -27,6 +26,10 @@ try:
 except ImportError:
     sys.exit("Requires Boto3 module; try 'pip install boto3'")
 
+try:
+    import certifi
+except ImportError:
+    sys.exit("Requires Certifi module; try 'pip install certifi'")
 
 PURPOSE = """\
 Generate a CA-signed certificate with Let's Encrypt
@@ -120,7 +123,7 @@ class ACME:
             ]
         }
         code, body, headers = self.send_request(self.operation_urls["newOrder"], payload)
-        if code is not 201:
+        if code != 201:
             sys.exit(body)
         response = json.loads(body)
         authorizations = response["authorizations"]

@@ -1,11 +1,13 @@
 # Copyright is waived. No warranty is provided. Unrestricted use and modification is permitted.
 
+import os
 import ssl
 import sys
 import json
 import time
 import base64
 import math
+import xml.etree.ElementTree as ET
 from hashlib import sha256
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
@@ -34,13 +36,9 @@ except ImportError:
 PURPOSE = """\
 Generate a CA-signed certificate with Let's Encrypt
 
-letsencrypt.py [bits=<n>] info=<path> key=<path> cert=<path>
+letsencrypt.py <configuration_file>
 
-where,
-   bits   optional, number of bits for certificate private key (default = 2048)
-   info   input path to JSON file with certificate information in X.509 naming scheme
-   key    input path to Let's Encrypt account private key
-   cert   output path to certificate file
+See sample_configuration.xml for configuration file specification
 """
 
 
@@ -62,7 +60,7 @@ def urlrequest(uri, method=None, data=None, headers=None):
     except HTTPError as e:
         headers = {key.lower(): e.headers[key] for key in e.headers}
         return e.code, e.read().decode("latin_1"), headers         # On fail the response body is returned as str()
-    except URLError as e:
+    except URLError:
         return 0, "URL Error", []
 
 
@@ -249,7 +247,11 @@ class ACME:
         signature_b64 = base64.urlsafe_b64encode(signature).rstrip(b"=")
 
         # Send the request
-        request_data = {"protected": protected_b64.decode("latin_1"), "payload": payload_b64.decode("latin_1"), "signature": signature_b64.decode("latin_1")}
+        request_data = {
+            "protected": protected_b64.decode("latin_1"),
+            "payload": payload_b64.decode("latin_1"),
+            "signature": signature_b64.decode("latin_1")
+        }
         request_data_string = json.dumps(request_data)
         request_headers = {"content-type": "application/jose+json"}
         code, body, headers = urlrequest(url, data=request_data_string.encode("latin_1"), headers=request_headers)
@@ -260,7 +262,7 @@ class ACME:
         return code, body, headers
 
 
-def generate_ca_signed_certificate(num_bits, information, acme_account_key):
+def generate_ca_signed_certificate(key_length, information, acme_account_key):
 
     # Generate a certificate signing request
     builder = x509.CertificateSigningRequestBuilder()
@@ -276,7 +278,7 @@ def generate_ca_signed_certificate(num_bits, information, acme_account_key):
     builder = builder.subject_name(subject)
     constraints = x509.BasicConstraints(ca=False, path_length=None)
     builder = builder.add_extension(constraints, critical=True)
-    private_key = rsa.generate_private_key(65537, num_bits, default_backend())
+    private_key = rsa.generate_private_key(65537, key_length, default_backend())
     csr = builder.sign(private_key, hashes.SHA256(), default_backend())
     csr_der = csr.public_bytes(serialization.Encoding.DER)
     csr_der_b64 = base64.urlsafe_b64encode(csr_der).rstrip(b"=")
@@ -284,7 +286,9 @@ def generate_ca_signed_certificate(num_bits, information, acme_account_key):
     # Request certificate from Let's Encrypt
     acme = ACME(acme_account_key)
     certificate_bytes = acme.order_certificate(information["CN"], csr_der_b64)
-    private_key_bytes = private_key.private_bytes(encoding=serialization.Encoding.PEM, format=serialization.PrivateFormat.TraditionalOpenSSL, encryption_algorithm=NoEncryption())
+    private_key_bytes = private_key.private_bytes(encoding=serialization.Encoding.PEM,
+                                                  format=serialization.PrivateFormat.TraditionalOpenSSL,
+                                                  encryption_algorithm=NoEncryption())
     return private_key_bytes.decode("latin_1"), certificate_bytes.decode("latin_1")
 
 
@@ -292,20 +296,19 @@ if __name__ == '__main__':
 
     if sys.version_info < (3, 6):
         sys.exit("Python version must be 3.6 or later")
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         sys.exit(PURPOSE)
 
-    num_bits = next((x.split("=", 1)[-1] for x in sys.argv if x.find("bits=") == 0), None)
-    num_bits = int(num_bits) if num_bits else 2048
-    info_path = next((x.split("=", 1)[-1] for x in sys.argv if x.find("info=") == 0), None)
-    with open(info_path, "r") as f:
-        info_json = json.load(f)
-    key_path = next((x.split("=", 1)[-1] for x in sys.argv if x.find("key=") == 0), None)
-    with open(key_path, "r") as f:
-        lets_encrypt_account_key = f.read()
-    cert_path = next((x.split("=", 1)[-1] for x in sys.argv if x.find("cert=") == 0), None)
-    pk, cert = generate_ca_signed_certificate(num_bits, info_json, lets_encrypt_account_key)
-    with open(cert_path, "w") as f:
+    configuration_path = sys.argv[1]
+    root = ET.parse(configuration_path).getroot()
+    key_length = int(root.find("PRIVATE_KEY_LENGTH").text)
+    output_path = root.find("OUTPUT_PATH").text
+    if not os.path.isabs(output_path):
+        output_path = os.path.join(os.path.dirname(configuration_path), output_path)
+    lets_encrypt_account_key = root.find("LETS_ENCRYPT_ACCOUNT_KEY").text.strip()
+    info = {item.tag: item.text for item in root.find("CSR")}
+    pk, cert = generate_ca_signed_certificate(key_length, info, lets_encrypt_account_key)
+    with open(output_path, "w") as f:
         f.write(pk)
         f.write(cert)
-    print("Certificate saved to " + cert_path)
+    print("Certificate saved to " + output_path)

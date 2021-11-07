@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CONFIGURATION>
+
+    <!-- Key length (in bits) for certificate private key -->
+    <PRIVATE_KEY_LENGTH>2048</PRIVATE_KEY_LENGTH>
+
+    <!-- Information for Certificate Signing Request -->
+    <CSR>
+        <CN>www.mydomain.com</CN>
+        <O>My Org Name</O>
+        <OU>HQ</OU>
+        <L>San Francisco</L>
+        <ST>CA</ST>
+        <C>US</C>
+        <EMAIL>myname@mydomain.com</EMAIL>
+    </CSR>
+
+    <!-- Output path for generated certificate file -->
+    <OUTPUT_PATH>path/to/certificate.pem</OUTPUT_PATH>
+
+    <!-- Account key for Let's Encrypt -->
+    <LETS_ENCRYPT_ACCOUNT_KEY>
+-----BEGIN RSA PRIVATE KEY-----
+...
+-----END RSA PRIVATE KEY-----
+    </LETS_ENCRYPT_ACCOUNT_KEY>
+</CONFIGURATION>

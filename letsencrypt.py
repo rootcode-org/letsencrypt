@@ -300,13 +300,13 @@ if __name__ == '__main__':
         sys.exit(PURPOSE)
 
     configuration_path = sys.argv[1]
-    root = ET.parse(configuration_path).getroot()
-    key_length = int(root.find("PRIVATE_KEY_LENGTH").text)
-    output_path = root.find("OUTPUT_PATH").text
+    config = ET.parse(configuration_path).getroot().find("certificate")
+    key_length = int(config.find("private_key_length").text)
+    output_path = config.find("output_path").text
     if not os.path.isabs(output_path):
         output_path = os.path.join(os.path.dirname(configuration_path), output_path)
-    lets_encrypt_account_key = root.find("LETS_ENCRYPT_ACCOUNT_KEY").text.strip()
-    info = {item.tag: item.text for item in root.find("CSR")}
+    lets_encrypt_account_key = config.find("lets_encrypt_account_key").text.strip()
+    info = {item.tag: item.text for item in config.find("csr")}
     pk, cert = generate_ca_signed_certificate(key_length, info, lets_encrypt_account_key)
     with open(output_path, "w") as f:
         f.write(pk)

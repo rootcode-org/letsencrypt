@@ -300,14 +300,14 @@ if __name__ == '__main__':
         sys.exit(PURPOSE)
 
     configuration_path = sys.argv[1]
-    config = ET.parse(configuration_path).getroot().find("certificate")
+    config = ET.parse(configuration_path).getroot().find("lets_encrypt")
     key_length = int(config.find("private_key_length").text)
     output_path = config.find("output_path").text
     if not os.path.isabs(output_path):
         output_path = os.path.join(os.path.dirname(configuration_path), output_path)
-    lets_encrypt_account_key = config.find("lets_encrypt_account_key").text.strip()
+    acme_account_key = config.find("acme_account_key").text.strip()
     info = {item.tag: item.text for item in config.find("csr")}
-    pk, cert = generate_ca_signed_certificate(key_length, info, lets_encrypt_account_key)
+    pk, cert = generate_ca_signed_certificate(key_length, info, acme_account_key)
     with open(output_path, "w") as f:
         f.write(pk)
         f.write(cert)

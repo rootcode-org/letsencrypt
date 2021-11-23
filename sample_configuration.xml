@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <configuration>
 
-    <certificate>
+    <lets_encrypt>
         <private_key_length>2048</private_key_length>
         <output_path>path/to/certificate.pem</output_path>
         <csr>
@@ -13,9 +13,9 @@
             <C>US</C>
             <EMAIL>myname@mydomain.com</EMAIL>
         </csr>
-        <lets_encrypt_account_key>
+        <acme_account_key>
 -----BEGIN RSA PRIVATE KEY-----
 -----END RSA PRIVATE KEY-----
-        </lets_encrypt_account_key>
-    </certificate>
+        </acme_account_key>
+    </lets_encrypt>
 </configuration>

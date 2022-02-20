@@ -36,9 +36,10 @@ except ImportError:
 PURPOSE = """\
 Generate a CA-signed certificate with Let's Encrypt
 
-letsencrypt.py <configuration_file>
+letsencrypt.py create
 
-See sample_configuration.xml for configuration file specification
+Configuration is specified in configuration.xml
+See sample_configuration.xml for example
 """
 
 
@@ -299,16 +300,21 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         sys.exit(PURPOSE)
 
-    configuration_path = sys.argv[1]
-    config = ET.parse(configuration_path).getroot().find("lets_encrypt")
-    key_length = int(config.find("private_key_length").text)
-    output_path = config.find("output_path").text
-    if not os.path.isabs(output_path):
-        output_path = os.path.join(os.path.dirname(configuration_path), output_path)
-    acme_account_key = config.find("acme_account_key").text.strip()
-    info = {item.tag: item.text for item in config.find("csr")}
-    pk, cert = generate_ca_signed_certificate(key_length, info, acme_account_key)
-    with open(output_path, "w") as f:
-        f.write(pk)
-        f.write(cert)
-    print("Certificate saved to " + output_path)
+    command = sys.argv[1]
+    config_file = 'configuration.xml' if os.path.exists('configuration.xml') else 'sample_configuration.xml'
+
+    if command == 'create':
+        config = ET.parse(config_file).getroot().find("lets_encrypt")
+        key_length = int(config.find("private_key_length").text)
+        output_path = config.find("output_path").text
+        if not os.path.isabs(output_path):
+            output_path = os.path.join(os.path.dirname(config_file), output_path)
+        acme_account_key = config.find("acme_account_key").text.strip()
+        info = {item.tag: item.text for item in config.find("csr")}
+        pk, cert = generate_ca_signed_certificate(key_length, info, acme_account_key)
+        with open(output_path, "w") as f:
+            f.write(pk)
+            f.write(cert)
+        print("Certificate saved to " + output_path)
+    else:
+        sys.exit('Unknown command')
